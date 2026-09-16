@@ -36,7 +36,8 @@ const win  = addNode(T.native, "Window", 100);
 addEdge(root, E.element, 0, win);
 
 const jwt = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjMifQ.abcDEFghijKLmno";
-for (let k = 0; k < 3; k++) {
+const LEAKS = parseInt(process.argv[3] || "3", 10);
+for (let k = 0; k < LEAKS; k++) {
   const leak = addNode(T.object, "Leaky", 32);
   addEdge(win, E.property, "leak" + k, leak);
   const sid = addNode(T.string, jwt, jwt.length * 2);

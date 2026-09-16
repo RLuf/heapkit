@@ -12,6 +12,7 @@
  *   retain <id|name>   retainer path to a GC root for a node id (#123) or exact name
  *   detached           detached DOM nodes + un-removed listeners (browser snapshots)
  *   buffers            largest ArrayBuffers and who retains them
+ *   diff <after>       compare with a second snapshot; show which constructors grew
  *
  * MIT licensed. (c) HeapKit.
  */
@@ -21,7 +22,7 @@ const fs = require('fs');
 const file = process.argv[2];
 const cmd = process.argv[3] || 'summary';
 const arg = process.argv[4] || '';
-if (!file) { console.error('usage: node heapkit.js <file.heapsnapshot> [summary|find <re>|retain <id|name>|detached|buffers]'); process.exit(1); }
+if (!file) { console.error('usage: node heapkit.js <file.heapsnapshot> [summary|find|retain|detached|buffers|diff <after>]'); process.exit(1); }
 
 console.error(`[heapkit] reading ${file} ...`);
 const snap = JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -95,4 +96,37 @@ if (cmd === 'summary') {
   abs.sort((a, b) => size(b) - size(a));
   console.log(`\n=== ${abs.length} ArrayBuffers; largest + retainers ===`);
   for (const a of abs.slice(0, 5)) { console.log('\n' + label(a)); for (const l of pathToRoot(a, R)) console.log('  ' + l); }
+} else if (cmd === 'diff') {
+  // Compare this snapshot (before) with a second one (after) and show which
+  // constructors grew — the fastest way to prove a leak: run it before and
+  // after N repetitions of the suspected action.
+  const file2 = arg;
+  if (!file2) { console.error('usage: heapkit.js <before.heapsnapshot> diff <after.heapsnapshot>'); process.exit(1); }
+  const aggOf = (nn, mm, ss) => {
+    const NF2 = mm.node_fields.length, iT = mm.node_fields.indexOf('type'), iNa = mm.node_fields.indexOf('name'), iSz = mm.node_fields.indexOf('self_size');
+    const NT2 = mm.node_types[0], m = new Map();
+    for (let i = 0; i < nn.length / NF2; i++) {
+      const t = NT2[nn[i * NF2 + iT]];
+      if (['string', 'concatenated string', 'sliced string', 'number', 'code', 'hidden', 'bigint'].includes(t)) continue;
+      const k = t + ' | ' + ss[nn[i * NF2 + iNa]];
+      const a = m.get(k) || { n: 0, s: 0 }; a.n++; a.s += nn[i * NF2 + iSz]; m.set(k, a);
+    }
+    return m;
+  };
+  const before = aggOf(nodes, meta, S);
+  console.error(`[heapkit] reading ${file2} (after) ...`);
+  const snap2 = JSON.parse(fs.readFileSync(file2, 'utf8'));
+  const after = aggOf(snap2.nodes, snap2.snapshot.meta, snap2.strings);
+  const keys = new Set([...before.keys(), ...after.keys()]);
+  const rows = [];
+  for (const k of keys) {
+    const b = before.get(k) || { n: 0, s: 0 }, a = after.get(k) || { n: 0, s: 0 };
+    const dn = a.n - b.n, dsz = a.s - b.s;
+    if (dn !== 0 || dsz !== 0) rows.push({ k, bn: b.n, an: a.n, dn, dsz });
+  }
+  rows.sort((x, y) => y.dn - x.dn);
+  console.log('\n=== grew most (before -> after, Δcount) ===');
+  for (const r of rows.slice(0, 25)) console.log(`${(r.dn > 0 ? '+' : '') + r.dn}`.padStart(9), `${r.bn}->${r.an}`.padStart(14), (r.dsz > 0 ? '+' : '') + r.dsz + 'B', r.k);
+  console.log('\n=== shrank most ===');
+  for (const r of rows.slice(-8)) console.log(`${(r.dn > 0 ? '+' : '') + r.dn}`.padStart(9), `${r.bn}->${r.an}`.padStart(14), r.k);
 } else { console.error('unknown command:', cmd); process.exit(1); }

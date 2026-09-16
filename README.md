@@ -1,7 +1,5 @@
 # HeapKit — Security Edition
 
-[![Sponsor](https://img.shields.io/badge/sponsor-%E2%9D%A4-ea4aaa)](https://github.com/sponsors/RLuf) 
-
 Offline analyzer for V8 `.heapsnapshot` files (Chrome / Node) that opens
 snapshots too big for the DevTools UI. Two tools, zero dependencies, Node 18+.
 
@@ -14,6 +12,7 @@ node --max-old-space-size=8192 heapkit.js <file.heapsnapshot> [summary|find <re>
 - `retain`   retainer path to GC root (the reason it leaks)
 - `detached` detached DOM nodes (browser leaks)
 - `buffers`  largest ArrayBuffers + who retains them
+- `diff <after>`  compare two snapshots; shows which constructors grew (proves a leak)
 
 ## heap-secrets.js — secrets left in memory  (security research)
 ```
