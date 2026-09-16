@@ -1,0 +1,10 @@
+{
+  "name": "heapkit",
+  "version": "1.0.0",
+  "description": "Offline analyzer for large V8 .heapsnapshot files (Chrome/Node): leak forensics + in-memory secrets scanner.",
+  "bin": { "heapkit": "heapkit.js", "heap-secrets": "heap-secrets.js" },
+  "scripts": { "test": "node test/test.js" },
+  "keywords": ["heapsnapshot","memory-leak","v8","chrome","devtools","security","forensics"],
+  "license": "MIT",
+  "engines": { "node": ">=18" }
+}

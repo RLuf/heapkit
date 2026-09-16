@@ -1,0 +1,3 @@
+test/fixture.heapsnapshot
+*.heapsnapshot
+node_modules/
